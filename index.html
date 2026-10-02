@@ -13,105 +13,28 @@
 
 <script>
 (function () {
-    var TOTAL = 18;
+  var TOTAL = 18;
+  var img = document.querySelector('img');
+  var player = new Audio();
+  player.preload = 'auto';
+  var last = 0;
 
-    // 本地 audio 目录（相对 index.html）
-    var LOCAL_BASE = 'audio/';
-    // GitHub 仓库的 raw 地址（直接指向文件）
-    var REMOTE_BASE = 'https://raw.githubusercontent.com/NTdebug145/audio/main/';
+  img.style.cursor = 'pointer';
 
-    var img = document.getElementById('avatar') || document.querySelector('img');
-    var player = new Audio();
-    var last = 0;
+  img.addEventListener('click', function () {
+    var n;
+    do { n = Math.floor(Math.random() * TOTAL) + 1; }
+    while (TOTAL > 1 && n === last);
+    last = n;
 
-    var useLocal = false;      // 本地是否可用
-    var audioBlobs = [];       // 存储预加载后的 Blob URL，索引 1~18
-
-    img.style.cursor = 'pointer';
-    img.style.webkitTapHighlightColor = 'transparent';
-
-    // 检查本地是否存在音频（尝试请求 1.wav）
-    function checkLocal() {
-        return fetch(LOCAL_BASE + '1.wav', { method: 'HEAD' })
-            .then(function (res) {
-                if (res.ok) {
-                    useLocal = true;
-                    console.log('本地 audio 目录可用，将使用本地音频');
-                } else {
-                    throw new Error('本地不可用');
-                }
-            })
-            .catch(function () {
-                useLocal = false;
-                console.log('本地 audio 目录不可用，开始预加载远程音频...');
-                preloadRemote();
-            });
+    player.pause();
+    player.currentTime = 0;
+    player.src = n + '.wav';
+    var p = player.play();
+    if (p && p.catch) {
+      p.catch(function (e) { console.warn('无法播放 ' + n + '.wav：', e); });
     }
-
-    // 预加载远程全部 18 个音频
-    function preloadRemote() {
-        for (var i = 1; i <= TOTAL; i++) {
-            (function (n) {
-                var url = REMOTE_BASE + n + '.wav';
-                fetch(url)
-                    .then(function (res) {
-                        if (!res.ok) throw new Error('网络错误');
-                        return res.blob();
-                    })
-                    .then(function (blob) {
-                        audioBlobs[n] = URL.createObjectURL(blob);
-                        console.log('预加载完成：' + n + '.wav');
-                    })
-                    .catch(function (err) {
-                        console.warn('预加载 ' + n + '.wav 失败：', err);
-                        // 失败时记录远程原始 URL 作为后备
-                        audioBlobs[n] = url;
-                    });
-            })(i);
-        }
-    }
-
-    // 播放指定编号的音频
-    function playFile(n) {
-        player.pause();
-        player.currentTime = 0;
-
-        var src;
-        if (useLocal) {
-            src = LOCAL_BASE + n + '.wav';
-        } else {
-            // 优先使用预加载的 Blob URL，否则回退到远程原始 URL
-            src = audioBlobs[n] || (REMOTE_BASE + n + '.wav');
-        }
-
-        player.src = src;
-        var p = player.play();
-        if (p && p.catch) {
-            p.catch(function (err) {
-                console.warn('播放失败：', err);
-                // 如果 Blob URL 失效，回退到远程原始 URL
-                if (!useLocal && src !== REMOTE_BASE + n + '.wav') {
-                    player.src = REMOTE_BASE + n + '.wav';
-                    player.play().catch(function (e) {
-                        console.warn('回退远程播放也失败：', e);
-                    });
-                }
-            });
-        }
-    }
-
-    // 点击头像随机播放
-    img.addEventListener('click', function () {
-        var n;
-        do {
-            n = Math.floor(Math.random() * TOTAL) + 1;
-        } while (TOTAL > 1 && n === last);
-        last = n;
-        playFile(n);
-    });
-
-    // 页面加载时立即检查本地音频
-    checkLocal();
+  });
 })();
 </script>
 
